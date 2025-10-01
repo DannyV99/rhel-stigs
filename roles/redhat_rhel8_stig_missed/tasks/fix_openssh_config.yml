@@ -1,0 +1,178 @@
+- name: XCCDF Value sshd_approved_ciphers # promote to variable
+  set_fact:
+    sshd_approved_ciphers: !!str aes256-ctr,aes192-ctr,aes128-ctr,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+  tags:
+    - always
+
+- name: 'Configure SSH Daemon to Use FIPS 140-2 Validated Ciphers: openssh.config'
+  block:
+
+  - name: Check for duplicate values
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*Ciphers\s+
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: dupes
+
+  - name: Deduplicate values from /etc/crypto-policies/back-ends/openssh.config
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*Ciphers\s+
+      state: absent
+    when: dupes.found is defined and dupes.found > 1
+
+  - name: Insert correct line to /etc/crypto-policies/back-ends/openssh.config
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*Ciphers\s+
+      line: Ciphers {{ sshd_approved_ciphers }}
+      state: present
+  tags:
+  - CCE-85902-5
+  - DISA-STIG-RHEL-08-010020
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_ciphers_openssh_conf_crypto_policy
+  - high_severity
+  - low_complexity
+  - low_disruption
+  - reboot_required
+  - restrict_strategy
+
+- name: XCCDF Value sshd_approved_macs # promote to variable
+  set_fact:
+    sshd_approved_macs: !!str hmac-sha2-512,hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+  tags:
+    - always
+
+- name: 'Configure SSH Daemon to Use FIPS 140-2 Validated MACs: openssh.config'
+  block:
+
+  - name: Check for duplicate values
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*MACs\s+
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: dupes
+
+  - name: Deduplicate values from /etc/crypto-policies/back-ends/openssh.config
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*MACs\s+
+      state: absent
+    when: dupes.found is defined and dupes.found > 1
+
+  - name: Insert correct line to /etc/crypto-policies/back-ends/openssh.config
+    lineinfile:
+      path: /etc/crypto-policies/back-ends/openssh.config
+      create: true
+      regexp: ^.*MACs\s+
+      line: MACs {{ sshd_approved_macs }}
+      state: present
+  tags:
+  - CCE-85870-4
+  - DISA-STIG-RHEL-08-010020
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_macs_openssh_conf_crypto_policy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - reboot_required
+  - restrict_strategy
+
+##########
+- name: XCCDF Value sshd_approved_macs # promote to variable
+  set_fact:
+    sshd_approved_macs: !!str hmac-sha2-512,hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+  tags:
+    - always
+
+- name: 'Configure SSH Server to Use FIPS 140-2 Validated MACs: opensshserver.config:
+    Set facts'
+  set_fact:
+    path: /etc/crypto-policies/back-ends/opensshserver.config
+    correct_value: -oMACs={{ sshd_approved_macs }}
+  tags:
+  - CCE-85899-3
+  - DISA-STIG-RHEL-08-010290
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_macs_opensshserver_conf_crypto_policy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - reboot_required
+  - restrict_strategy
+
+- name: 'Configure SSH Server to Use FIPS 140-2 Validated MACs: opensshserver.config:
+    Stat'
+  stat:
+    path: '{{ path }}'
+    follow: true
+  register: opensshserver_file
+  tags:
+  - CCE-85899-3
+  - DISA-STIG-RHEL-08-010290
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_macs_opensshserver_conf_crypto_policy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - reboot_required
+  - restrict_strategy
+
+- name: 'Configure SSH Server to Use FIPS 140-2 Validated MACs: opensshserver.config:
+    Create'
+  lineinfile:
+    path: '{{ path }}'
+    line: CRYPTO_POLICY='{{ correct_value }}'
+    create: true
+  when: not opensshserver_file.stat.exists or opensshserver_file.stat.size <= correct_value|length
+  tags:
+  - CCE-85899-3
+  - DISA-STIG-RHEL-08-010290
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_macs_opensshserver_conf_crypto_policy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - reboot_required
+  - restrict_strategy
+
+- name: 'Configure SSH Server to Use FIPS 140-2 Validated MACs: opensshserver.config'
+  block:
+
+  - name: Existing value check
+    lineinfile:
+      path: '{{ path }}'
+      create: false
+      regexp: '{{ correct_value }}'
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: opensshserver
+
+  - name: Update/Correct value
+    replace:
+      path: '{{ path }}'
+      regexp: (-oMACS=\S+)
+      replace: '{{ correct_value }}'
+    when: opensshserver.found is defined and opensshserver.found != 1
+  when: opensshserver_file.stat.exists and opensshserver_file.stat.size > correct_value|length
+  tags:
+  - CCE-85899-3
+  - DISA-STIG-RHEL-08-010290
+  - NIST-800-53-AC-17(2)
+  - harden_sshd_macs_opensshserver_conf_crypto_policy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - reboot_required
+  - restrict_strategy

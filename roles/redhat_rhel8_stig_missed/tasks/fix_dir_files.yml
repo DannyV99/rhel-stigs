@@ -1,0 +1,279 @@
+- name: Get all local users from /etc/passwd
+  ansible.builtin.getent:
+    database: passwd
+    split: ':'
+  tags:
+  - CCE-85888-6
+  - DISA-STIG-RHEL-08-010731
+  - accounts_users_home_files_permissions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Create local_users variable from the getent output
+  ansible.builtin.set_fact:
+    local_users: '{{ ansible_facts.getent_passwd|dict2items }}'
+  tags:
+  - CCE-85888-6
+  - DISA-STIG-RHEL-08-010731
+  - accounts_users_home_files_permissions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Test for existence home directories to avoid creating them.
+  ansible.builtin.stat:
+    path: '{{ item.value[4] }}'
+  register: path_exists
+  loop: '{{ local_users }}'
+  when:
+  - item.value[1]|int >= 1000
+  - item.value[1]|int != 65534
+  tags:
+  - CCE-85888-6
+  - DISA-STIG-RHEL-08-010731
+  - accounts_users_home_files_permissions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Ensure interactive local users have proper permissions on their respective
+    home directories
+  ansible.builtin.file:
+    path: '{{ item.0.value[4] }}'
+    mode: u-s,g-w-s,o=-
+    follow: false
+    recurse: true
+  loop: '{{ local_users|zip(path_exists.results)|list }}'
+  when: item.1.stat is defined and item.1.stat.exists
+  tags:
+  - CCE-85888-6
+  - DISA-STIG-RHEL-08-010731
+  - accounts_users_home_files_permissions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: XCCDF Value var_user_initialization_files_regex # promote to variable
+  set_fact:
+    var_user_initialization_files_regex: !!str ^\.[\w\- ]+$
+  tags:
+    - always
+
+- name: Ensure All User Initialization Files Have Mode 0740 Or Less Permissive - Gather
+    User Info
+  ansible.builtin.getent:
+    database: passwd
+  tags:
+  - CCE-86106-2
+  - DISA-STIG-RHEL-08-010770
+  - file_permission_user_init_files_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Ensure All User Initialization Files Have Mode 0740 Or Less Permissive - Find
+    Init Files
+  ansible.builtin.find:
+    paths: '{{ item.value[4] }}'
+    pattern: '{{ var_user_initialization_files_regex }}'
+    hidden: true
+    use_regex: true
+  with_dict: '{{ ansible_facts.getent_passwd }}'
+  when:
+  - item.value[4] != "/sbin/nologin"
+  - item.key not in ["nobody", "nfsnobody"]
+  - item.value[1] | int >= 1000 or item.key == "root"
+  register: found_init_files
+  tags:
+  - CCE-86106-2
+  - DISA-STIG-RHEL-08-010770
+  - file_permission_user_init_files_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Ensure All User Initialization Files Have Mode 0740 Or Less Permissive - Fix
+    Init Files Permissions
+  ansible.builtin.file:
+    path: '{{ item.1.path }}'
+    mode: u-s,g-wxs,o=
+  loop: '{{ q(''ansible.builtin.subelements'', found_init_files.results, ''files'',
+    {''skip_missing'': True}) }}'
+  tags:
+  - CCE-86106-2
+  - DISA-STIG-RHEL-08-010770
+  - file_permission_user_init_files_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Find /lib/ file(s) recursively
+  command: 'find -H /lib/  -perm /g+w,o+w  -type d '
+  register: files_found
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Set permissions for /lib/ file(s)
+  file:
+    path: '{{ item }}'
+    mode: g-w,o-w
+    state: directory
+  with_items:
+  - '{{ files_found.stdout_lines }}'
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Find /lib64/ file(s) recursively
+  command: 'find -H /lib64/  -perm /g+w,o+w  -type d '
+  register: files_found
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Set permissions for /lib64/ file(s)
+  file:
+    path: '{{ item }}'
+    mode: g-w,o-w
+    state: directory
+  with_items:
+  - '{{ files_found.stdout_lines }}'
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Find /usr/lib/ file(s) recursively
+  command: 'find -H /usr/lib/  -perm /g+w,o+w  -type d '
+  register: files_found
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Set permissions for /usr/lib/ file(s)
+  file:
+    path: '{{ item }}'
+    mode: g-w,o-w
+    state: directory
+  with_items:
+  - '{{ files_found.stdout_lines }}'
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Find /usr/lib64/ file(s) recursively
+  command: 'find -H /usr/lib64/  -perm /g+w,o+w  -type d '
+  register: files_found
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Set permissions for /usr/lib64/ file(s)
+  file:
+    path: '{{ item }}'
+    mode: g-w,o-w
+    state: directory
+  with_items:
+  - '{{ files_found.stdout_lines }}'
+  tags:
+  - CCE-88692-9
+  - DISA-STIG-RHEL-08-010331
+  - NIST-800-53-CM-5
+  - NIST-800-53-CM-5(6)
+  - NIST-800-53-CM-5(6).1
+  - configure_strategy
+  - dir_permissions_library_dirs
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed

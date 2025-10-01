@@ -1,0 +1,19 @@
+---
+- hosts: all 
+  gather_facts: yes
+  become: true
+  become_user: root
+  vars:
+#    rhel_08_010300: false
+#    rhel_08_010320: false
+#    rhel_08_010310: false
+#    rhel_08_010320: false
+#    rhel_08_010330: false
+#    rhel_08_010340: false
+#    rhel_08_010350: false
+
+  roles:
+    - role: ../roles/redhat_rhel8_stig
+    - role: ../roles/redhat_rhel8_stig_missed
+    - role: ../roles/redhat_pamd_fix
+    - role: ../roles/RHEL9-STIG

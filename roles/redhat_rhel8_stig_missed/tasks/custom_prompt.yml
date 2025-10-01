@@ -1,0 +1,20 @@
+- name: Create custom_prompt.sh in /etc/profile.d
+  copy:
+    dest: /etc/profile.d/custom_prompt.sh
+    content: |
+      #!/bin/bash
+      
+      # Add date time stamp to history and prompt, also update history size
+      export HISTTIMEFORMAT='%F-%T '
+      export PROMPT_COMMAND='echo -n "[`date +%F-%T`] "'
+      export HISTSIZE=99999
+      export HISTFILESIZE=99999
+      export HISTCONTROL=ignoredups
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Verify custom_prompt.sh is active
+  shell: source /etc/profile.d/custom_prompt.sh
+  args:
+    executable: /bin/bash

@@ -1,0 +1,74 @@
+- name: Check if 99_auditd.rules exists
+  stat:
+    path: /etc/audit/rules.d/99_auditd.rules
+  register: auditd_custom_rules_missing
+
+- name: Kill the auditd process
+  command: pkill -P 1 auditd
+  ignore_errors: yes
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Clear all audit rules
+  command: auditctl -D
+  ignore_errors: yes
+  become: yes
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Remove all files in /etc/audit/rules.d/
+  file:
+    path: /etc/audit/rules.d/
+    state: absent
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Remove /etc/audit/audit.rules
+  file:
+    path: /etc/audit/audit.rules
+    state: absent
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Remove any additional audit.rules.* files
+  find:
+    paths: /etc/audit/
+    patterns: 'audit.rules.*'
+  register: extra_audit_rules_files
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Delete found audit.rules.* files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ extra_audit_rules_files.files }}"
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Backup the auditd configuration file
+  command: mv /etc/audit/auditd.conf /etc/audit/auditd.conf.bak
+  args:
+    removes: /etc/audit/auditd.conf
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Remove the audit package
+  yum:
+    name: audit
+    state: absent
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Install the audit package
+  yum:
+    name: audit
+    state: present
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Restore SELinux context for /etc/audit
+  command: restorecon -Rv /etc/audit
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Kill the auditd process again
+  command: pkill -P 1 auditd
+  ignore_errors: yes
+  when: not auditd_custom_rules_missing.stat.exists
+
+- name: Start auditd service
+  systemd:
+    name: auditd
+    state: started
+  when: not auditd_custom_rules_missing.stat.exists

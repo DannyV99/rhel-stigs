@@ -1,0 +1,70 @@
+- name: Include fix_rule_aide_verify_acls tasks
+  ansible.builtin.import_tasks:
+      file: fix_rule_aide_verify_acls.yml
+  tags:
+      - fix_rule_aide_verify_acls_tasks
+
+- name: Include fix_rule_aide_verify_ext_attributes tasks
+  ansible.builtin.import_tasks:
+      file: fix_rule_aide_verify_ext_attributes.yml
+  tags:
+      - fix_rule_aide_verify_ext_attributes_tasks
+
+- name: Include fix_openssh_config tasks
+  ansible.builtin.import_tasks:
+      file: fix_openssh_config.yml
+  tags:
+      - fix_openssh_config_tasks
+
+- name: Include fix_dir_files tasks
+  ansible.builtin.import_tasks:
+      file: fix_dir_files.yml
+  tags:
+      - fix_dir_files_tasks
+
+- name: Include fix_usbguard tasks
+  ansible.builtin.import_tasks:
+      file: fix_usbguard.yml
+  tags:
+      - fix_usbguard_tasks
+
+- name: Include disable_kdump tasks
+  ansible.builtin.import_tasks:
+      file: disable_kdump.yml
+  tags:
+      - disable_kdump_tasks
+
+- name: Include fix_postfix tasks
+  ansible.builtin.import_tasks:
+      file: fix_postfix.yml
+  tags:
+      - fix_postfix_tasks
+
+- name: Include fix_chrony tasks
+  ansible.builtin.import_tasks:
+      file: fix_chrony.yml
+  tags:
+      - fix_chrony_tasks
+
+- name: Include fix_sshd_config tasks
+  ansible.builtin.import_tasks:
+      file: fix_sshd_config.yml
+  tags:
+      - fix_sshd_config_tasks
+
+- name: Include fix_aidecron tasks
+  ansible.builtin.import_tasks:
+      file: fix_aidecron.yml
+  tags:
+      - fix_aidecron_tasks
+
+- name: Include custom_prompt tasks
+  ansible.builtin.import_tasks:
+      file: custom_prompt.yml
+  tags:
+      - custom_prompt_tasks
+
+
+
+
+

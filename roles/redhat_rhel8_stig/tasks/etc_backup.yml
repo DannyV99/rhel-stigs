@@ -1,0 +1,21 @@
+---
+- name: Ensure backup directory exists
+  file:
+    path: "/root/.aap_etc_backup_{{ ansible_date_time.iso8601_basic }}"
+    state: directory
+    mode: 0644
+
+- name: Backup /etc directory
+  copy:
+    src: /etc
+    dest: "/root/.aap_etc_backup_{{ ansible_date_time.iso8601_basic }}"
+    owner: root
+    group: root
+    mode: 0644
+    remote_src: yes
+
+- name: Archive the backup directory
+  command: tar -czvf /root/.aap_etc_backup_{{ ansible_date_time.iso8601_basic }}.tar.gz -C /root .aap_etc_backup_{{ ansible_date_time.iso8601_basic }}
+
+- name: Remove the uncompressed backup directory
+  command: rm -rf /root/.aap_etc_backup_{{ ansible_date_time.iso8601_basic }}
